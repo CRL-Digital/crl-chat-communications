@@ -99,6 +99,11 @@ let environmentVariables = {
 		optional: true,
 		default: 'example.invalid',
 	},
+
+	DEFAULT_TENANT_CODE: {
+		message: 'Tenant code used when a request does not send tenant_code',
+		optional: false,
+	},
 }
 
 let success = true

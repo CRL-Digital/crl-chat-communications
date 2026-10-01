@@ -1,10 +1,12 @@
 const validator = require('@middlewares/validator')
 const authenticator = require('@middlewares/authenticator')
+const defaultTenant = require('@middlewares/defaultTenant')
 const fs = require('fs')
 const path = require('path')
 
 module.exports = (app) => {
 	app.use(authenticator)
+	app.use(defaultTenant)
 	async function getAllowedControllers(directoryPath) {
 		try {
 			const getAllFilesAndDirectories = (dir) => {
