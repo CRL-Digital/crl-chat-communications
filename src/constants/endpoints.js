@@ -11,5 +11,11 @@ module.exports = {
 		USERS_SET_AVATAR: '/api/v1/users.setAvatar',
 		USERS_SET_ACTIVE_STATUS: '/api/v1/users.setActiveStatus',
 		USERS_RESET_AVATAR: '/api/v1/users.resetAvatar',
+		GROUPS_CREATE: '/api/v1/groups.create',
+		GROUPS_SET_TOPIC: '/api/v1/groups.setTopic',
+		GROUPS_INVITE: '/api/v1/groups.invite',
+		GROUPS_KICK: '/api/v1/groups.kick',
+		GROUPS_ARCHIVE: '/api/v1/groups.archive',
+		GROUPS_DELETE: '/api/v1/groups.delete',
 	},
 }

@@ -246,3 +246,77 @@ exports.resetAvatar = async (username) => {
 		return handleError(error)
 	}
 }
+
+// Group (private room) functions: rooms for any number of users, members can change later
+
+// Create a private group with the given members (chat usernames)
+exports.createGroup = async (name, usernames) => {
+	try {
+		const payload = { name, members: usernames, excludeSelf: true }
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_CREATE, payload)
+		return {
+			room: {
+				room_id: response.data.group._id,
+				name: response.data.group.name,
+			},
+		}
+	} catch (error) {
+		throw handleError(error)
+	}
+}
+
+// Set the group's topic (used as its readable name)
+exports.setGroupTopic = async (roomId, topic) => {
+	try {
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_SET_TOPIC, { roomId, topic })
+		return response.data
+	} catch (error) {
+		throw handleError(error)
+	}
+}
+
+// Add a user (chat user id) to a group
+exports.addGroupMember = async (roomId, chatUserId) => {
+	try {
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_INVITE, {
+			roomId,
+			userId: chatUserId,
+		})
+		return response.data
+	} catch (error) {
+		throw handleError(error)
+	}
+}
+
+// Remove a user (chat user id) from a group
+exports.removeGroupMember = async (roomId, chatUserId) => {
+	try {
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_KICK, {
+			roomId,
+			userId: chatUserId,
+		})
+		return response.data
+	} catch (error) {
+		throw handleError(error)
+	}
+}
+
+// Archive a group: members keep the history, nobody can post
+exports.archiveGroup = async (roomId) => {
+	try {
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_ARCHIVE, { roomId })
+		return response.data
+	} catch (error) {
+		throw handleError(error)
+	}
+}
+
+// Delete a group and its messages
+exports.deleteGroup = async (roomId) => {
+	try {
+		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_DELETE, { roomId })
+		return response.data
+	} catch (error) {
+		throw handleError(error)
+	}
+}

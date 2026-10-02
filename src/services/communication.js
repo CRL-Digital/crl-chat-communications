@@ -22,6 +22,7 @@ const apiResponses = require('@constants/api-responses')
 const responses = require('@helpers/responses')
 const { usernameHash, passwordHash } = require('@generics/utils')
 const userQueries = require('../database/queries/user')
+const crypto = require('crypto')
 
 /**
  * Helper class for handling communication-related operations with chat platform API.
@@ -450,4 +451,139 @@ module.exports = class CommunicationHelper {
 			})
 		}
 	}
+
+	/**
+	 * Creates a private group for any number of users. Generic: callers decide what the group is for.
+	 *
+	 * @param {Object} bodyData
+	 * @param {string} bodyData.name - Readable group name (stored as the group topic).
+	 * @param {string[]} bodyData.user_ids - User IDs to add (they must already be signed up).
+	 * @param {string} bodyData.tenant_code - The tenant code.
+	 * @returns {Promise<Object>} Response with the new room's `room_id`.
+	 */
+	static async createGroup(bodyData) {
+		delete bodyData.tenant_code
+
+		try {
+			const usernames = [...new Set(bodyData.user_ids.map(String))].map((userId) => usernameHash(userId))
+			const chatResponse = await chatAPIs.createGroup(groupRoomName(bodyData.name), usernames)
+			await chatAPIs.setGroupTopic(chatResponse.room.room_id, bodyData.name)
+
+			return responses.successResponse({
+				statusCode: httpStatusCode.ok,
+				message: 'GROUP_CREATED',
+				result: { room: { ...chatResponse.room, topic: bodyData.name } },
+			})
+		} catch (error) {
+			console.error('Error in createGroup:', error)
+			if (error.message === 'invalid-users') {
+				return responses.failureResponse({
+					message: apiResponses.USER_DOEST_NOT_EXIST,
+					statusCode: httpStatusCode.bad_request,
+					responseCode: 'CLIENT_ERROR',
+				})
+			}
+			return responses.failureResponse({
+				statusCode: httpStatusCode.internal_server_error,
+				message: 'GROUP_CREATION_FAILED',
+				responseCode: 'SERVER_ERROR',
+			})
+		}
+	}
+
+	/**
+	 * Adds users to a group. Each user is handled separately.
+	 *
+	 * @param {Object} bodyData - `room_id`, `user_ids`, `tenant_code`.
+	 * @returns {Promise<Object>} `{ added, failed, not_found }` lists of user IDs.
+	 */
+	static async addGroupMembers(bodyData) {
+		return this.#changeGroupMembers(bodyData, chatAPIs.addGroupMember, 'GROUP_MEMBERS_ADDED', 'added')
+	}
+
+	/**
+	 * Removes users from a group. Each user is handled separately.
+	 *
+	 * @param {Object} bodyData - `room_id`, `user_ids`, `tenant_code`.
+	 * @returns {Promise<Object>} `{ removed, failed, not_found }` lists of user IDs.
+	 */
+	static async removeGroupMembers(bodyData) {
+		return this.#changeGroupMembers(bodyData, chatAPIs.removeGroupMember, 'GROUP_MEMBERS_REMOVED', 'removed')
+	}
+
+	/**
+	 * Archives a group: members keep the history, nobody can post.
+	 *
+	 * @param {Object} bodyData - `room_id`, `tenant_code`.
+	 */
+	static async archiveGroup(bodyData) {
+		return this.#groupAction(bodyData.room_id, chatAPIs.archiveGroup, 'GROUP_ARCHIVED', 'GROUP_ARCHIVE_FAILED')
+	}
+
+	/**
+	 * Deletes a group and its messages.
+	 *
+	 * @param {Object} bodyData - `room_id`, `tenant_code`.
+	 */
+	static async deleteGroup(bodyData) {
+		return this.#groupAction(bodyData.room_id, chatAPIs.deleteGroup, 'GROUP_DELETED', 'GROUP_DELETE_FAILED')
+	}
+
+	static async #changeGroupMembers(bodyData, chatAction, message, doneKey) {
+		const tenantCode = bodyData.tenant_code
+		const roomId = bodyData.room_id
+		const result = { [doneKey]: [], failed: [], not_found: [] }
+
+		for (const userId of [...new Set(bodyData.user_ids.map(String))]) {
+			const userDetails = await userQueries.findOne({ user_id: userId }, tenantCode)
+			if (!userDetails) {
+				result.not_found.push(userId)
+				continue
+			}
+			try {
+				await chatAction(roomId, userDetails.user_info.external_user_id)
+				result[doneKey].push(userId)
+			} catch (error) {
+				console.error(`Group ${roomId}: ${doneKey} failed for user ${userId}:`, error.message)
+				result.failed.push(userId)
+			}
+		}
+
+		return responses.successResponse({
+			statusCode: httpStatusCode.ok,
+			message,
+			result,
+		})
+	}
+
+	static async #groupAction(roomId, chatAction, message, failureMessage) {
+		try {
+			await chatAction(roomId)
+			return responses.successResponse({
+				statusCode: httpStatusCode.ok,
+				message,
+				result: { room_id: roomId },
+			})
+		} catch (error) {
+			console.error(`Group ${roomId}: ${message} failed:`, error.message)
+			return responses.failureResponse({
+				statusCode: httpStatusCode.internal_server_error,
+				message: failureMessage,
+				responseCode: 'SERVER_ERROR',
+			})
+		}
+	}
+}
+
+/**
+ * Chat room names must be unique and use only letters, digits, - _ and .
+ * so build one from the readable name plus a random suffix.
+ */
+function groupRoomName(name) {
+	const slug = String(name)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40)
+	return `${slug || 'group'}-${crypto.randomBytes(4).toString('hex')}`
 }

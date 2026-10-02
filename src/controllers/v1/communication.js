@@ -166,4 +166,67 @@ module.exports = class Communication {
 			return error
 		}
 	}
+
+	/**
+	 * Creates a private group for any number of users.
+	 * @param {Object} req - `req.body`: `name`, `user_ids`.
+	 * @returns {Promise<Object>} `{ room: { room_id, name, topic } }`.
+	 */
+	async createGroup(req) {
+		try {
+			return await communicationService.createGroup(req.body)
+		} catch (error) {
+			return error
+		}
+	}
+
+	/**
+	 * Adds users to a group.
+	 * @param {Object} req - `req.body`: `room_id`, `user_ids`.
+	 * @returns {Promise<Object>} `{ added, failed, not_found }`.
+	 */
+	async addGroupMembers(req) {
+		try {
+			return await communicationService.addGroupMembers(req.body)
+		} catch (error) {
+			return error
+		}
+	}
+
+	/**
+	 * Removes users from a group.
+	 * @param {Object} req - `req.body`: `room_id`, `user_ids`.
+	 * @returns {Promise<Object>} `{ removed, failed, not_found }`.
+	 */
+	async removeGroupMembers(req) {
+		try {
+			return await communicationService.removeGroupMembers(req.body)
+		} catch (error) {
+			return error
+		}
+	}
+
+	/**
+	 * Archives a group (read-only, history kept).
+	 * @param {Object} req - `req.body`: `room_id`.
+	 */
+	async archiveGroup(req) {
+		try {
+			return await communicationService.archiveGroup(req.body)
+		} catch (error) {
+			return error
+		}
+	}
+
+	/**
+	 * Deletes a group and its messages.
+	 * @param {Object} req - `req.body`: `room_id`.
+	 */
+	async deleteGroup(req) {
+		try {
+			return await communicationService.deleteGroup(req.body)
+		} catch (error) {
+			return error
+		}
+	}
 }

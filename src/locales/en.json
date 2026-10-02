@@ -10,5 +10,10 @@
 	"NAME_UPDATED": "User details has been successfully updated.",
 	"CHAT_ROOM_CREATED": "Chat room has been successfully updated.",
 	"STATUS_UPDATED": "User Status has been successfully Updated.",
+	"GROUP_CREATED": "Group has been successfully created.",
+	"GROUP_MEMBERS_ADDED": "Group members have been added.",
+	"GROUP_MEMBERS_REMOVED": "Group members have been removed.",
+	"GROUP_ARCHIVED": "Group has been archived.",
+	"GROUP_DELETED": "Group has been deleted.",
     "IMAGE_RESET": "Profile image reset successfully"
 }
