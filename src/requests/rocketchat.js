@@ -249,10 +249,12 @@ exports.resetAvatar = async (username) => {
 
 // Group (private room) functions: rooms for any number of users, members can change later
 
-// Create a private group with the given members (chat usernames)
+// Create a private group with the given members (chat usernames).
+// The admin (this service) stays in the group as owner: Rocket.Chat's groups.* APIs
+// only work for members, so it must be in the group to change members or archive it.
 exports.createGroup = async (name, usernames) => {
 	try {
-		const payload = { name, members: usernames, excludeSelf: true }
+		const payload = { name, members: usernames }
 		const response = await chatPlatformAxios.post(apiEndpoints.ROCKETCHAT.GROUPS_CREATE, payload)
 		return {
 			room: {
