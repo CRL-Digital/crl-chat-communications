@@ -44,10 +44,13 @@ module.exports = class CommunicationHelper {
 		delete bodyData.tenant_code
 
 		const userExists = await userQueries.findOne({ user_id: bodyData.user_id }, tenantCode)
+		// Already signed up (e.g. an earlier signup failed after creating the account): hand back the
+		// existing chat user id so the caller can link it, instead of leaving the user unlinked.
 		if (userExists) {
-			return responses.failureResponse({
-				statusCode: httpStatusCode.conflict,
+			return responses.successResponse({
+				statusCode: httpStatusCode.ok,
 				message: 'USER_ALREADY_EXISTS',
+				result: { user_id: userExists.user_info?.external_user_id },
 			})
 		}
 
@@ -71,8 +74,13 @@ module.exports = class CommunicationHelper {
 				tenantCode
 			)
 
+			// The account works without a picture: a failed avatar must not fail the signup.
 			if (bodyData.image_url) {
-				await chatAPIs.setAvatar(usernameHash(bodyData.user_id), bodyData.image_url)
+				try {
+					await chatAPIs.setAvatar(usernameHash(bodyData.user_id), bodyData.image_url)
+				} catch (error) {
+					console.error(`Signup ${bodyData.user_id}: avatar not set:`, error.message)
+				}
 			}
 
 			return responses.successResponse({
